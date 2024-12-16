@@ -46,6 +46,8 @@ class SpotifyService {
     return artist;
   }
 
+
+
   // Pobieranie najnowszego albumu artysty
   Future<Map<String, dynamic>> getLatestAlbum(
       String artistId, String accessToken) async {

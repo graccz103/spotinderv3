@@ -33,6 +33,10 @@ dependencies:
   http: ^0.13.3
   audioplayers: ^6.1.0
   url_launcher: ^6.1.6
+  sensors_plus:
+    git:
+      url: https://github.com/fluttercommunity/plus_plugins.git
+      path: packages/sensors_plus/sensors_plus
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

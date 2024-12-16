@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'spotify_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 
@@ -39,15 +41,40 @@ class _MyHomePageState extends State<MyHomePage> {
   // Lista ulubionych artystów
   final List<Map<String, dynamic>> likedArtists = [];
 
+  StreamSubscription? _sensorSubscription;
+
+  bool _isActionPerformed = false; // Flaga zapobiegająca wielokrotnym akcjom
+
   @override
   void initState() {
     super.initState();
     artistData = SpotifyService().getRandomArtist(); // Pobieranie losowego artysty
+
+    // Subskrybuj zmiany akcelerometru
+    _sensorSubscription = accelerometerEvents.listen((event) {
+      if (!_isActionPerformed) {
+        if (event.x < -7) {
+          // Przechylenie w lewo – polubienie artysty
+          _isActionPerformed = true;
+          _likeCurrentArtist();
+        } else if (event.x > 7) {
+          // Przechylenie w prawo – pominięcie artysty
+          _isActionPerformed = true;
+          _nextArtist();
+        }
+      }
+
+      // Resetowanie flagi, gdy telefon wraca do normalnej pozycji
+      if (event.x.abs() < 3) {
+        _isActionPerformed = false;
+      }
+    });
   }
 
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _sensorSubscription?.cancel();
     super.dispose();
   }
 
@@ -59,12 +86,13 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  // Dodawanie artysty do ulubionych
-  void _likeArtist(Map<String, dynamic> artist) {
+  // Polubienie aktualnego artysty
+  void _likeCurrentArtist() async {
+    var currentArtist = await artistData;
     setState(() {
-      likedArtists.add(artist);
+      likedArtists.add(currentArtist);
     });
-    _nextArtist(); // Przejdź do następnego artysty
+    _nextArtist();
   }
 
   // Odtwarzanie podglądu utworu
@@ -91,7 +119,7 @@ class _MyHomePageState extends State<MyHomePage> {
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () {
-              // Przejdź do ekranu ulubionych
+              // Przejdź do ekranu ulubionych artystów
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -124,11 +152,9 @@ class _MyHomePageState extends State<MyHomePage> {
               return GestureDetector(
                 onHorizontalDragEnd: (details) {
                   if (details.velocity.pixelsPerSecond.dx > 0) {
-                    // Swipe w prawo
-                    _likeArtist(artist);
+                    _likeCurrentArtist(); // Swipe w prawo
                   } else if (details.velocity.pixelsPerSecond.dx < 0) {
-                    // Swipe w lewo
-                    _nextArtist();
+                    _nextArtist(); // Swipe w lewo
                   }
                 },
                 child: SingleChildScrollView(
@@ -185,7 +211,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Swipe left to skip, swipe right to like!',
+                          'Tilt phone left to like, right to skip!',
                           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                         ),
                       ],
