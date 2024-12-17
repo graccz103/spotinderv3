@@ -12,12 +12,12 @@ class LikedArtistsPage extends StatefulWidget {
 }
 
 class _LikedArtistsPageState extends State<LikedArtistsPage> {
-  List<Map<String, dynamic>> _likedArtists = [];
+  late List<Map<String, dynamic>> _likedArtists;
 
   @override
   void initState() {
     super.initState();
-    _likedArtists = List.from(widget.likedArtists); // Tworzymy kopię listy
+    _likedArtists = List.from(widget.likedArtists); // Kopiowanie listy
   }
 
   Future<void> _removeArtist(int index) async {
@@ -31,48 +31,64 @@ class _LikedArtistsPageState extends State<LikedArtistsPage> {
     if (await canLaunchUrl(Uri.parse(spotifyUrl))) {
       await launchUrl(Uri.parse(spotifyUrl), mode: LaunchMode.externalApplication);
     } else {
-      throw 'Could not launch $spotifyUrl';
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch Spotify link')),
+      );
     }
+  }
+
+  void _onBackPressed() {
+    Navigator.pop(context, _likedArtists); // Przekazanie listy z powrotem
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Liked Artists"),
-      ),
-      body: _likedArtists.isEmpty
-          ? const Center(child: Text("No liked artists yet."))
-          : ListView.builder(
-        itemCount: _likedArtists.length,
-        itemBuilder: (context, index) {
-          var artist = _likedArtists[index];
-          var artistName = artist['name'] ?? 'Unknown';
-          var imageUrl = artist['images']?.isNotEmpty == true
-              ? artist['images'][0]['url']
-              : null;
-          var spotifyUrl = artist['external_urls']?['spotify']; // Link do Spotify
+    return WillPopScope(
+      onWillPop: () async {
+        _onBackPressed();
+        return false; // Zapobiega automatycznemu zamknięciu
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Liked Artists"),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onBackPressed, // Zamknięcie strony z przekazaniem danych
+          ),
+        ),
+        body: _likedArtists.isEmpty
+            ? const Center(child: Text("No liked artists yet."))
+            : ListView.builder(
+          itemCount: _likedArtists.length,
+          itemBuilder: (context, index) {
+            var artist = _likedArtists[index];
+            var artistName = artist['name'] ?? 'Unknown';
+            var imageUrl = artist['images']?.isNotEmpty == true
+                ? artist['images'][0]['url']
+                : null;
+            var spotifyUrl = artist['external_urls']?['spotify'];
 
-          return ListTile(
-            leading: imageUrl != null
-                ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                : null,
-            title: Text(artistName),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _removeArtist(index),
-            ),
-            onTap: () {
-              if (spotifyUrl != null) {
-                _openArtistProfile(spotifyUrl); // Otwórz profil artysty
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Spotify link not available')),
-                );
-              }
-            },
-          );
-        },
+            return ListTile(
+              leading: imageUrl != null
+                  ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
+                  : null,
+              title: Text(artistName),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removeArtist(index),
+              ),
+              onTap: () {
+                if (spotifyUrl != null) {
+                  _openArtistProfile(spotifyUrl);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Spotify link not available')),
+                  );
+                }
+              },
+            );
+          },
+        ),
       ),
     );
   }

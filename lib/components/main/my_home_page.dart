@@ -87,14 +87,22 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              var updatedLikedArtists = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => LikedArtistsPage(likedArtists: likedArtists),
                 ),
               );
+
+              if (updatedLikedArtists != null) {
+                setState(() {
+                  likedArtists = updatedLikedArtists; // Aktualizacja lokalnej listy
+                });
+                await LikedArtistsManager.saveLikedArtists(likedArtists);
+              }
             },
+
           ),
         ],
       ),
