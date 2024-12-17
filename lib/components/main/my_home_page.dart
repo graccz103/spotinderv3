@@ -20,7 +20,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
-  late Future<Map<String, dynamic>> artistData;
+  Future<Map<String, dynamic>> artistData = Future.value({}); // Inicjalizacja pustą wartością
   List<Map<String, dynamic>> likedArtists = [];
   final PreviewPlayer _previewPlayer = PreviewPlayer();
 
@@ -30,12 +30,16 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _loadLikedArtists().then((_) {
-      artistData = widget.spotifyService.getRandomArtist(
-        excludedIds: likedArtists.map((artist) => artist['id'] as String).toList(),
-      );
-    });
+    _loadLikedArtists();
+    _fetchNextArtist(); // Pierwsze załadowanie artysty
     listenToAccelerometer(_likeCurrentArtist, _nextArtist);
+  }
+
+  Future<void> _fetchNextArtist() async {
+    artistData = widget.spotifyService.getRandomArtist(
+      excludedIds: likedArtists.map((artist) => artist['id'].toString()).toList(),
+    );
+    setState(() {}); // Odświeżenie widoku
   }
 
   Future<void> _loadLikedArtists() async {
@@ -51,19 +55,15 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     var currentArtist = await artistData;
     setState(() {
       likedArtists.add(currentArtist);
+      _saveLikedArtists();
       _resetPosition();
     });
-    await _saveLikedArtists();
-    _nextArtist();
+    _fetchNextArtist(); // Załaduj nowego artystę
   }
 
   void _nextArtist() {
-    setState(() {
-      artistData = widget.spotifyService.getRandomArtist(
-        excludedIds: likedArtists.map((artist) => artist['id'] as String).toList(),
-      );
-      _resetPosition();
-    });
+    _fetchNextArtist(); // Załaduj nowego artystę
+    _resetPosition();
   }
 
   void _resetPosition() {
@@ -105,29 +105,29 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (snapshot.hasData) {
+          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
             return GestureDetector(
               onPanUpdate: (details) {
                 setState(() {
-                  _dragPosition += details.delta.dx; // Przesunięcie w poziomie
-                  _rotationAngle = _dragPosition / 300; // Kąt obrotu (skalowany)
+                  _dragPosition += details.delta.dx;
+                  _rotationAngle = _dragPosition / 300;
                 });
               },
               onPanEnd: (details) {
                 if (_dragPosition > 150) {
-                  _likeCurrentArtist(); // Swipe w prawo
+                  _likeCurrentArtist();
                 } else if (_dragPosition < -150) {
-                  _nextArtist(); // Swipe w lewo
+                  _nextArtist();
                 } else {
-                  _resetPosition(); // Powrót do stanu początkowego
+                  _resetPosition();
                 }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut,
                 transform: Matrix4.identity()
-                  ..translate(_dragPosition, 0, 0) // Przesunięcie
-                  ..rotateZ(_rotationAngle * pi / 12), // Obrót
+                  ..translate(_dragPosition, 0, 0)
+                  ..rotateZ(_rotationAngle * pi / 12),
                 child: ArtistInfoWidget(
                   artist: snapshot.data!,
                   currentPreviewUrl: _previewPlayer.currentPreviewUrl,
