@@ -30,8 +30,11 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    artistData = widget.spotifyService.getRandomArtist();
-    _loadLikedArtists();
+    _loadLikedArtists().then((_) {
+      artistData = widget.spotifyService.getRandomArtist(
+        excludedIds: likedArtists.map((artist) => artist['id'] as String).toList(),
+      );
+    });
     listenToAccelerometer(_likeCurrentArtist, _nextArtist);
   }
 
@@ -56,7 +59,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   void _nextArtist() {
     setState(() {
-      artistData = widget.spotifyService.getRandomArtist();
+      artistData = widget.spotifyService.getRandomArtist(
+        excludedIds: likedArtists.map((artist) => artist['id'] as String).toList(),
+      );
       _resetPosition();
     });
   }

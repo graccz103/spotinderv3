@@ -16,21 +16,33 @@ class ArtistService {
     required this.trackService,
   });
 
-  Future<Map<String, dynamic>> getRandomArtist() async {
+  Future<Map<String, dynamic>> getRandomArtist({required List<String> excludedIds}) async {
     String accessToken = await authService.getAccessToken();
     String randomQuery = _getRandomQuery();
 
-    var response = await http.get(
-      Uri.parse('https://api.spotify.com/v1/search?q=$randomQuery&type=artist&limit=1'),
-      headers: {'Authorization': 'Bearer $accessToken'},
-    );
+    int retries = 0; // Liczba prób uniknięcia duplikatów
+    while (retries < 10) { // Maksymalna liczba prób
+      var response = await http.get(
+        Uri.parse('https://api.spotify.com/v1/search?q=$randomQuery&type=artist&limit=1'),
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
 
-    var searchData = jsonDecode(response.body);
-    if (searchData['artists']?['items']?.isNotEmpty == true) {
-      var artist = searchData['artists']['items'][0];
-      return await getArtistData(artist, accessToken);
+      var searchData = jsonDecode(response.body);
+      if (searchData['artists']?['items']?.isNotEmpty == true) {
+        var artist = searchData['artists']['items'][0];
+        String artistId = artist['id'];
+
+        // Sprawdzenie czy ID artysty znajduje się na liście ulubionych
+        if (!excludedIds.contains(artistId)) {
+          return await getArtistData(artist, accessToken);
+        }
+      }
+      // Ponowna próba jeśli artysta się powtarza
+      randomQuery = _getRandomQuery();
+      retries++;
     }
-    return getRandomArtist(); // Ponów próbę, jeśli brak artysty
+
+    throw Exception("Unable to fetch a unique artist after multiple attempts");
   }
 
   Future<Map<String, dynamic>> getArtistData(

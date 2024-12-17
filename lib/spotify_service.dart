@@ -25,10 +25,9 @@ class SpotifyService {
     );
   }
 
-
-  // Funkcja pobierająca losowego artystę
-  Future<Map<String, dynamic>> getRandomArtist() async {
-    return await _artistService.getRandomArtist();
+  // Funkcja pobierająca losowego artystę, uwzględniająca listę wykluczonych ID
+  Future<Map<String, dynamic>> getRandomArtist({required List<String> excludedIds}) async {
+    return await _artistService.getRandomArtist(excludedIds: excludedIds);
   }
 
   // Funkcja pobierająca szczegóły artysty
