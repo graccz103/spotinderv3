@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:math'; // Do obrotu
 import '../../spotify_service.dart';
+import '../spotify_service/utils.dart';
 import 'liked_artists_page.dart';
-import '../../components/spotify_service/utils.dart';
+import 'my_home_page/artist_info_widget.dart';
+import 'my_home_page/liked_artists_manager.dart';
+import 'my_home_page/accelerometer_listener.dart';
+import 'my_home_page/play_preview_button.dart';
 
 class MyHomePage extends StatefulWidget {
   final String title;
@@ -16,68 +19,58 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   late Future<Map<String, dynamic>> artistData;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _currentPreviewUrl;
+  List<Map<String, dynamic>> likedArtists = [];
+  final PreviewPlayer _previewPlayer = PreviewPlayer();
 
-  final List<Map<String, dynamic>> likedArtists = [];
-  bool _isActionPerformed = false;
+  double _dragPosition = 0; // Do przesunięcia
+  double _rotationAngle = 0; // Do obrotu
 
   @override
   void initState() {
     super.initState();
     artistData = widget.spotifyService.getRandomArtist();
-    _listenToAccelerometer();
+    _loadLikedArtists();
+    listenToAccelerometer(_likeCurrentArtist, _nextArtist);
   }
 
-  void _listenToAccelerometer() {
-    accelerometerEvents.listen((event) {
-      if (!_isActionPerformed) {
-        if (event.x < -7) {
-          _isActionPerformed = true;
-          _likeCurrentArtist();
-        } else if (event.x > 7) {
-          _isActionPerformed = true;
-          _nextArtist();
-        }
-      }
-      if (event.x.abs() < 3) _isActionPerformed = false;
-    });
+  Future<void> _loadLikedArtists() async {
+    likedArtists = await LikedArtistsManager.loadLikedArtists();
+    setState(() {});
   }
 
-  void _nextArtist() {
-    setState(() {
-      artistData = widget.spotifyService.getRandomArtist();
-      _currentPreviewUrl = null;
-    });
+  Future<void> _saveLikedArtists() async {
+    await LikedArtistsManager.saveLikedArtists(likedArtists);
   }
 
   void _likeCurrentArtist() async {
     var currentArtist = await artistData;
     setState(() {
       likedArtists.add(currentArtist);
+      _resetPosition();
     });
+    await _saveLikedArtists();
     _nextArtist();
   }
 
-  void _playPreview(String url) async {
-    if (_currentPreviewUrl == url) {
-      await _audioPlayer.stop();
-      setState(() {
-        _currentPreviewUrl = null;
-      });
-    } else {
-      await _audioPlayer.play(UrlSource(url));
-      setState(() {
-        _currentPreviewUrl = url;
-      });
-    }
+  void _nextArtist() {
+    setState(() {
+      artistData = widget.spotifyService.getRandomArtist();
+      _resetPosition();
+    });
+  }
+
+  void _resetPosition() {
+    setState(() {
+      _dragPosition = 0;
+      _rotationAngle = 0;
+    });
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _previewPlayer.dispose();
     super.dispose();
   }
 
@@ -108,56 +101,37 @@ class _MyHomePageState extends State<MyHomePage> {
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           } else if (snapshot.hasData) {
-            var artist = snapshot.data!;
-            var artistName = artist['name'] ?? 'Unknown';
-            var imageUrl = artist['images']?.isNotEmpty == true
-                ? artist['images'][0]['url']
-                : null;
-            var albumName = artist['latest_album']?['name'] ?? 'No album available';
-            var topTrackName = artist['top_track']?['name'] ?? 'No track available';
-            var previewUrl = artist['top_track']?['preview_url'];
-            var spotifyUrl = artist['top_track']?['spotify_url'];
-            var followers = artist['followers']?['total'] ?? 'N/A';
-
-            return Center(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text('Artist: $artistName',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    if (imageUrl != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(imageUrl, height: 200, width: 200, fit: BoxFit.cover),
-                      ),
-                    const SizedBox(height: 10),
-                    Text('Followers: $followers', style: const TextStyle(fontSize: 16)),
-                    const SizedBox(height: 10),
-                    Text('Latest Album: $albumName', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(height: 10),
-                    Text('Top Track: $topTrackName', style: const TextStyle(fontSize: 18)),
-                    const SizedBox(height: 20),
-                    if (previewUrl != null)
-                      ElevatedButton(
-                        onPressed: () => _playPreview(previewUrl),
-                        child: Text(
-                          _currentPreviewUrl == previewUrl ? 'Stop Preview' : 'Play Preview',
-                        ),
-                      ),
-                    if (spotifyUrl != null)
-                      ElevatedButton(
-                        onPressed: () => openSpotifyLink(spotifyUrl),
-                        child: const Text('Open in Spotify'),
-                      ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Tilt phone left to like, right to skip!',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ],
+            return GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  _dragPosition += details.delta.dx; // Przesunięcie w poziomie
+                  _rotationAngle = _dragPosition / 300; // Kąt obrotu (skalowany)
+                });
+              },
+              onPanEnd: (details) {
+                if (_dragPosition > 150) {
+                  _likeCurrentArtist(); // Swipe w prawo
+                } else if (_dragPosition < -150) {
+                  _nextArtist(); // Swipe w lewo
+                } else {
+                  _resetPosition(); // Powrót do stanu początkowego
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                transform: Matrix4.identity()
+                  ..translate(_dragPosition, 0, 0) // Przesunięcie
+                  ..rotateZ(_rotationAngle * pi / 12), // Obrót
+                child: ArtistInfoWidget(
+                  artist: snapshot.data!,
+                  currentPreviewUrl: _previewPlayer.currentPreviewUrl,
+                  onPlayPreview: (url) => _previewPlayer.playPreview(url, (state) {
+                    setState(() {
+                      _previewPlayer.currentPreviewUrl = state;
+                    });
+                  }),
+                  onOpenSpotify: openSpotifyLink,
                 ),
               ),
             );
