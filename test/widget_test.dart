@@ -7,13 +7,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:spotinderv3/spotify_service.dart';
 import 'package:spotinderv3/main.dart';
+import 'package:mockito/mockito.dart';
+
+class MockSpotifyService extends Mock implements SpotifyService {}
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Utwórz instancję mock SpotifyService
+    final spotifyService = MockSpotifyService();
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(spotifyService: spotifyService));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

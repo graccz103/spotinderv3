@@ -33,6 +33,7 @@ dependencies:
   http: ^0.13.3
   audioplayers: ^6.1.0
   url_launcher: ^6.1.6
+  mockito: ^5.4.4
   sensors_plus:
     git:
       url: https://github.com/fluttercommunity/plus_plugins.git
