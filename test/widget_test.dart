@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spotinderv3/components/main/my_app.dart';
 import 'package:spotinderv3/spotify_service.dart';
 import 'package:spotinderv3/main.dart';
 import 'package:mockito/mockito.dart';
