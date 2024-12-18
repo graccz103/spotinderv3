@@ -5,12 +5,10 @@ import '../spotify_service/utils.dart';
 import 'liked_artists_page.dart';
 import 'my_home_page/artist_info_widget.dart';
 import 'my_home_page/liked_artists_manager.dart';
-import 'my_home_page/hated_artists_manager.dart';
 import 'my_home_page/accelerometer_listener.dart';
 import 'my_home_page/play_preview_button.dart';
 import 'hated_artists_page.dart';
-import 'package:sensors_plus/sensors_plus.dart';
-import 'dart:async';
+import 'my_home_page/hated_artists_manager.dart';
 
 class MyHomePage extends StatefulWidget {
   final String title;
@@ -23,64 +21,22 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   Future<Map<String, dynamic>> artistData = Future.value({});
   List<Map<String, dynamic>> likedArtists = [];
   List<Map<String, dynamic>> hatedArtists = [];
   final PreviewPlayer _previewPlayer = PreviewPlayer();
-  late StreamSubscription _accelerometerSubscription;
 
   double _dragPosition = 0;
   double _rotationAngle = 0;
-  bool _isAccelerometerActive = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _loadLikedArtists();
-    _loadHatedArtists();
+    _loadHatedArtists(); // Ładowanie "Hated Artists"
     _fetchNextArtist();
-    _startListeningToAccelerometer();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _stopListeningToAccelerometer();
-    _previewPlayer.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Aplikacja w tle lub nieaktywna - zatrzymaj nasłuchiwanie
-      _stopListeningToAccelerometer();
-    } else if (state == AppLifecycleState.resumed) {
-      // Aplikacja wróciła do aktywności - wznow nasłuchiwanie
-      _startListeningToAccelerometer();
-    }
-  }
-
-  void _startListeningToAccelerometer() {
-    if (!_isAccelerometerActive) {
-      _isAccelerometerActive = true;
-      _accelerometerSubscription = accelerometerEvents.listen((event) {
-        if (event.x > 7) {
-          _likeCurrentArtist();
-        } else if (event.x < -7) {
-          _hateCurrentArtist();
-        }
-      });
-    }
-  }
-
-  void _stopListeningToAccelerometer() {
-    if (_isAccelerometerActive) {
-      _isAccelerometerActive = false;
-      _accelerometerSubscription.cancel();
-    }
+    listenToAccelerometer(_likeCurrentArtist, _hateCurrentArtist);
   }
 
   Future<void> _fetchNextArtist() async {
@@ -139,6 +95,12 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 
   @override
+  void dispose() {
+    _previewPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -163,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             },
           ),
           IconButton(
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close), // Ikona czaszki lub "X"
             onPressed: () async {
               var updatedHatedArtists = await Navigator.push(
                 context,
@@ -199,9 +161,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               },
               onPanEnd: (details) {
                 if (_dragPosition > 150) {
-                  _likeCurrentArtist();
+                  _likeCurrentArtist(); // Przesunięcie w prawo
                 } else if (_dragPosition < -150) {
-                  _hateCurrentArtist();
+                  _hateCurrentArtist(); // Przesunięcie w lewo
                 } else {
                   _resetPosition();
                 }
