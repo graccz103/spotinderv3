@@ -84,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       });
     } catch (e) {
       print('Error fetching artist: $e');
-      // Ponów próbę załadowania nowego artysty
+      await Future.delayed(const Duration(seconds: 2));
       _fetchNextArtist();
     }
   }

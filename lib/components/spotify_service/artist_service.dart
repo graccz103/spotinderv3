@@ -22,7 +22,7 @@ class ArtistService {
     String? genre,
   }) async {
     String accessToken = await authService.getAccessToken();
-    int maxRetries = 100; // Maksymalna liczba prób
+    int maxRetries = 25; // Maksymalna liczba prób
     int retries = 0; // Licznik prób
 
     while (retries < maxRetries) {
