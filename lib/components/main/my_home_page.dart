@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math'; // Do obrotu
+import 'dart:math';
 import '../../spotify_service.dart';
 import '../spotify_service/utils.dart';
 import 'liked_artists_page.dart';
@@ -21,7 +21,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<Map<String, dynamic>> artistData = Future.value({});
   List<Map<String, dynamic>> likedArtists = [];
   List<Map<String, dynamic>> hatedArtists = [];
@@ -33,10 +33,28 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLikedArtists();
-    _loadHatedArtists(); // Ładowanie "Hated Artists"
+    _loadHatedArtists();
     _fetchNextArtist();
-    listenToAccelerometer(_likeCurrentArtist, _hateCurrentArtist);
+    AccelerometerListener.startListening(_likeCurrentArtist, _hateCurrentArtist);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AccelerometerListener.stopListening();
+    _previewPlayer.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      AccelerometerListener.stopListening();
+    } else if (state == AppLifecycleState.resumed) {
+      AccelerometerListener.startListening(_likeCurrentArtist, _hateCurrentArtist);
+    }
   }
 
   Future<void> _fetchNextArtist() async {
@@ -95,12 +113,6 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 
   @override
-  void dispose() {
-    _previewPlayer.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -125,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             },
           ),
           IconButton(
-            icon: const Icon(Icons.close), // Ikona czaszki lub "X"
+            icon: const Icon(Icons.close),
             onPressed: () async {
               var updatedHatedArtists = await Navigator.push(
                 context,
@@ -161,9 +173,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               },
               onPanEnd: (details) {
                 if (_dragPosition > 150) {
-                  _likeCurrentArtist(); // Przesunięcie w prawo
+                  _likeCurrentArtist();
                 } else if (_dragPosition < -150) {
-                  _hateCurrentArtist(); // Przesunięcie w lewo
+                  _hateCurrentArtist();
                 } else {
                   _resetPosition();
                 }
