@@ -22,12 +22,11 @@ class ArtistService {
     String? genre,
   }) async {
     String accessToken = await authService.getAccessToken();
-    int maxRetries = 25; // Maksymalna liczba prób
-    int retries = 0; // Licznik prób
+    int maxRetries = 25; // Maximum number of retries
+    int retries = 0; // Retry counter
 
     while (retries < maxRetries) {
-      // Losowy offset
-      int offset = Random().nextInt(100); // Zakładając maksymalną liczbę wyników = 100
+      int offset = Random().nextInt(100); // Random offset
       String query = genre != null ? 'genre:$genre' : _getRandomQuery();
 
       var response = await http.get(
@@ -42,7 +41,7 @@ class ArtistService {
         if (searchData['artists']?['items']?.isNotEmpty == true) {
           var artist = searchData['artists']['items'][0];
           if (!excludedIds.contains(artist['id'])) {
-            return artist; // Zwróć artystę, jeśli został znaleziony i nie jest wykluczony
+            return artist; // Return artist if found and not excluded
           }
         }
       }
@@ -53,21 +52,22 @@ class ArtistService {
     throw Exception("No artists found after $maxRetries attempts");
   }
 
-
-
-
-  /// Fetch artist details including latest album and top track
+  /// Fetch artist details including latest album and top track concurrently
   Future<Map<String, dynamic>> getArtistData(
       Map<String, dynamic> artist, String accessToken) async {
     String artistId = artist['id'];
 
-    var latestAlbum = await albumService.getLatestAlbum(artistId, accessToken);
-    artist['latest_album'] =
-    latestAlbum.isNotEmpty ? latestAlbum : {'name': 'No album available'};
+    // Fetch the latest album and top track in parallel
+    var results = await Future.wait([
+      albumService.getLatestAlbum(artistId, accessToken),
+      trackService.getTopTrack(artistId, accessToken),
+    ]);
 
-    var topTrack = await trackService.getTopTrack(artistId, accessToken);
+    // Assign results to the artist data
+    artist['latest_album'] =
+    results[0].isNotEmpty ? results[0] : {'name': 'No album available'};
     artist['top_track'] =
-    topTrack.isNotEmpty ? topTrack : {'name': 'No track available'};
+    results[1].isNotEmpty ? results[1] : {'name': 'No track available'};
 
     return artist;
   }
