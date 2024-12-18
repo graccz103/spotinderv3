@@ -25,6 +25,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<Map<String, dynamic>> artistData = Future.value({});
   List<Map<String, dynamic>> likedArtists = [];
   List<Map<String, dynamic>> hatedArtists = [];
+  List<String> genres = []; // Zmienna na listę gatunków
+  String? selectedGenre; // Wybrany gatunek
   final PreviewPlayer _previewPlayer = PreviewPlayer();
 
   double _dragPosition = 0;
@@ -34,6 +36,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadGenres(); // Załaduj dostępne gatunki
     _loadLikedArtists();
     _loadHatedArtists();
     _fetchNextArtist();
@@ -57,15 +60,28 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _fetchNextArtist() async {
-    artistData = widget.spotifyService.getRandomArtist(
-      excludedIds: [
-        ...likedArtists.map((artist) => artist['id']),
-        ...hatedArtists.map((artist) => artist['id']),
-      ],
-    );
+  Future<void> _loadGenres() async {
+    genres = widget.spotifyService.getAvailableGenres();
     setState(() {});
   }
+
+  Future<void> _fetchNextArtist() async {
+    try {
+      artistData = widget.spotifyService.getRandomArtist(
+        excludedIds: [
+          ...likedArtists.map((artist) => artist['id']),
+          ...hatedArtists.map((artist) => artist['id']),
+        ],
+        genre: selectedGenre,
+      );
+      setState(() {});
+    } catch (e) {
+      print('Error fetching artist: $e');
+      // Ponów próbę załadowania nowego artysty
+      _fetchNextArtist();
+    }
+  }
+
 
   Future<void> _loadLikedArtists() async {
     likedArtists = await LikedArtistsManager.loadLikedArtists();
@@ -118,6 +134,24 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          DropdownButton<String>(
+            value: selectedGenre,
+            hint: const Text('Select genre'),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('All Genres')),
+              ...genres.map((genre) => DropdownMenuItem(value: genre, child: Text(genre))),
+            ],
+            onChanged: (value) {
+              if (value == null || widget.spotifyService.validateGenre(value)) {
+                setState(() {
+                  selectedGenre = value;
+                  _fetchNextArtist(); // Przeładuj artystów na podstawie gatunku
+                });
+              } else {
+                print('Invalid genre selected');
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () async {

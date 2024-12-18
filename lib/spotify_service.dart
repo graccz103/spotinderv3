@@ -3,12 +3,20 @@ import 'components/spotify_service/artist_service.dart';
 import 'components/spotify_service/album_service.dart';
 import 'components/spotify_service/track_service.dart';
 import 'components/spotify_service/utils.dart';
+import 'components/spotify_service/genre_manager.dart';
 
 class SpotifyService {
   late final AuthService _authService;
   late final ArtistService _artistService;
   late final AlbumService _albumService;
   late final TrackService _trackService;
+  late final GenreManager _genreManager;
+  List<String> getAvailableGenres() {
+    return _genreManager.fetchGenres();
+  }
+  bool validateGenre(String genre) {
+    return _genreManager.validateGenre(genre);
+  }
 
   // Konstruktor z wymaganymi parametrami
   SpotifyService({
@@ -18,6 +26,7 @@ class SpotifyService {
     _authService = AuthService(clientId: clientId, clientSecret: clientSecret);
     _albumService = AlbumService();
     _trackService = TrackService();
+    _genreManager = GenreManager();
     _artistService = ArtistService(
       authService: _authService,
       albumService: _albumService,
@@ -25,10 +34,19 @@ class SpotifyService {
     );
   }
 
+
+
   // Funkcja pobierająca losowego artystę, uwzględniająca listę wykluczonych ID
-  Future<Map<String, dynamic>> getRandomArtist({required List<String> excludedIds}) async {
-    return await _artistService.getRandomArtist(excludedIds: excludedIds);
+  Future<Map<String, dynamic>> getRandomArtist({
+    required List<String> excludedIds,
+    String? genre,
+  }) async {
+    return await _artistService.getRandomArtist(
+      excludedIds: excludedIds,
+      genre: genre, // Przekaż parametr genre
+    );
   }
+
 
   // Funkcja pobierająca szczegóły artysty
   Future<Map<String, dynamic>> getArtistData(Map<String, dynamic> artist) async {
