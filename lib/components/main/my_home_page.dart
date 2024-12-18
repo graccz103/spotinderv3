@@ -67,20 +67,28 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future<void> _fetchNextArtist() async {
     try {
-      artistData = widget.spotifyService.getRandomArtist(
+      var newArtist = await widget.spotifyService.getRandomArtist(
         excludedIds: [
           ...likedArtists.map((artist) => artist['id']),
           ...hatedArtists.map((artist) => artist['id']),
         ],
         genre: selectedGenre,
       );
-      setState(() {});
+
+      // Pobierz szczegóły artysty
+      var detailedArtist = await widget.spotifyService.getArtistData(newArtist);
+
+      // Przypisz artystę do danych
+      setState(() {
+        artistData = Future.value(detailedArtist);
+      });
     } catch (e) {
       print('Error fetching artist: $e');
       // Ponów próbę załadowania nowego artysty
       _fetchNextArtist();
     }
   }
+
 
 
   Future<void> _loadLikedArtists() async {
