@@ -7,6 +7,8 @@ import 'my_home_page/artist_info_widget.dart';
 import 'my_home_page/liked_artists_manager.dart';
 import 'my_home_page/accelerometer_listener.dart';
 import 'my_home_page/play_preview_button.dart';
+import 'hated_artists_page.dart';
+import 'my_home_page/hated_artists_manager.dart';
 
 class MyHomePage extends StatefulWidget {
   final String title;
@@ -20,26 +22,31 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
-  Future<Map<String, dynamic>> artistData = Future.value({}); // Inicjalizacja pustą wartością
+  Future<Map<String, dynamic>> artistData = Future.value({});
   List<Map<String, dynamic>> likedArtists = [];
+  List<Map<String, dynamic>> hatedArtists = [];
   final PreviewPlayer _previewPlayer = PreviewPlayer();
 
-  double _dragPosition = 0; // Do przesunięcia
-  double _rotationAngle = 0; // Do obrotu
+  double _dragPosition = 0;
+  double _rotationAngle = 0;
 
   @override
   void initState() {
     super.initState();
     _loadLikedArtists();
-    _fetchNextArtist(); // Pierwsze załadowanie artysty
-    listenToAccelerometer(_likeCurrentArtist, _nextArtist);
+    _loadHatedArtists(); // Ładowanie "Hated Artists"
+    _fetchNextArtist();
+    listenToAccelerometer(_likeCurrentArtist, _hateCurrentArtist);
   }
 
   Future<void> _fetchNextArtist() async {
     artistData = widget.spotifyService.getRandomArtist(
-      excludedIds: likedArtists.map((artist) => artist['id'].toString()).toList(),
+      excludedIds: [
+        ...likedArtists.map((artist) => artist['id']),
+        ...hatedArtists.map((artist) => artist['id']),
+      ],
     );
-    setState(() {}); // Odświeżenie widoku
+    setState(() {});
   }
 
   Future<void> _loadLikedArtists() async {
@@ -47,8 +54,17 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     setState(() {});
   }
 
+  Future<void> _loadHatedArtists() async {
+    hatedArtists = await HatedArtistsManager.loadHatedArtists();
+    setState(() {});
+  }
+
   Future<void> _saveLikedArtists() async {
     await LikedArtistsManager.saveLikedArtists(likedArtists);
+  }
+
+  Future<void> _saveHatedArtists() async {
+    await HatedArtistsManager.saveHatedArtists(hatedArtists);
   }
 
   void _likeCurrentArtist() async {
@@ -58,12 +74,17 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       _saveLikedArtists();
       _resetPosition();
     });
-    _fetchNextArtist(); // Załaduj nowego artystę
+    _fetchNextArtist();
   }
 
-  void _nextArtist() {
-    _fetchNextArtist(); // Załaduj nowego artystę
-    _resetPosition();
+  void _hateCurrentArtist() async {
+    var currentArtist = await artistData;
+    setState(() {
+      hatedArtists.add(currentArtist);
+      _saveHatedArtists();
+      _resetPosition();
+    });
+    _fetchNextArtist();
   }
 
   void _resetPosition() {
@@ -97,12 +118,29 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
               if (updatedLikedArtists != null) {
                 setState(() {
-                  likedArtists = updatedLikedArtists; // Aktualizacja lokalnej listy
+                  likedArtists = updatedLikedArtists;
                 });
-                await LikedArtistsManager.saveLikedArtists(likedArtists);
+                await _saveLikedArtists();
               }
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.close), // Ikona czaszki lub "X"
+            onPressed: () async {
+              var updatedHatedArtists = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HatedArtistsPage(hatedArtists: hatedArtists),
+                ),
+              );
 
+              if (updatedHatedArtists != null) {
+                setState(() {
+                  hatedArtists = updatedHatedArtists;
+                });
+                await _saveHatedArtists();
+              }
+            },
           ),
         ],
       ),
@@ -123,9 +161,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               },
               onPanEnd: (details) {
                 if (_dragPosition > 150) {
-                  _likeCurrentArtist();
+                  _likeCurrentArtist(); // Przesunięcie w prawo
                 } else if (_dragPosition < -150) {
-                  _nextArtist();
+                  _hateCurrentArtist(); // Przesunięcie w lewo
                 } else {
                   _resetPosition();
                 }
