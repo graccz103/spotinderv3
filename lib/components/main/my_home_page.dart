@@ -109,13 +109,14 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       print('Fetched lists: $lists');
 
       setState(() {
-        likedArtists = List<Map<String, dynamic>>.from(lists['likelist'].map((id) => {'id': id}));
-        hatedArtists = List<Map<String, dynamic>>.from(lists['hatelist'].map((id) => {'id': id}));
+        likedArtists = List<Map<String, dynamic>>.from(lists['likelist']);
+        hatedArtists = List<Map<String, dynamic>>.from(lists['hatelist']);
       });
 
       print('Updated likedArtists: $likedArtists');
       print('Updated hatedArtists: $hatedArtists');
 
+      // Zapisz lokalnie
       await LikedArtistsManager.saveLikedArtists(likedArtists);
       await HatedArtistsManager.saveHatedArtists(hatedArtists);
 
@@ -129,6 +130,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       );
     }
   }
+
+
 
 
 
