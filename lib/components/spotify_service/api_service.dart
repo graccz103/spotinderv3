@@ -6,7 +6,8 @@ class ApiService {
 
   ApiService({required this.baseUrl});
 
-  Future<Map<String, dynamic>> registerUser(String username, String password) async {
+  Future<Map<String, dynamic>> registerUser(String username,
+      String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
       headers: {'Content-Type': 'application/json'},
@@ -19,7 +20,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> loginUser(String username, String password) async {
+  Future<Map<String, dynamic>> loginUser(String username,
+      String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
       headers: {'Content-Type': 'application/json'},
@@ -69,6 +71,15 @@ class ApiService {
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to update hatelist');
+    }
+  }
+
+  Future<void> delete(String endpoint) async {
+    final url = Uri.parse('$baseUrl$endpoint');
+    final response = await http.delete(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete resource');
     }
   }
 }

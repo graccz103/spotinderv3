@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'my_home_page/liked_artists_manager.dart';
+import '../spotify_service/api_service.dart';
 
 class LikedArtistsPage extends StatefulWidget {
   final List<Map<String, dynamic>> likedArtists;
+  final String userId;
 
-  const LikedArtistsPage({Key? key, required this.likedArtists}) : super(key: key);
+  const LikedArtistsPage({Key? key, required this.likedArtists, required this.userId}) : super(key: key);
+
 
   @override
   _LikedArtistsPageState createState() => _LikedArtistsPageState();
@@ -21,11 +24,22 @@ class _LikedArtistsPageState extends State<LikedArtistsPage> {
   }
 
   Future<void> _removeArtist(int index) async {
-    setState(() {
-      _likedArtists.removeAt(index);
-    });
-    await LikedArtistsManager.saveLikedArtists(_likedArtists);
+    var artist = _likedArtists[index];
+    try {
+      await ApiService(baseUrl: 'http://10.0.2.2:4000')
+          .delete('/likelist/${widget.userId}/${artist['id']}');
+      setState(() {
+        _likedArtists.removeAt(index);
+      });
+      await LikedArtistsManager.saveLikedArtists(_likedArtists);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove artist from database: $e')),
+      );
+    }
   }
+
+
 
   Future<void> _openArtistProfile(String spotifyUrl) async {
     if (await canLaunchUrl(Uri.parse(spotifyUrl))) {

@@ -188,41 +188,51 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     var currentArtist = await artistData;
     if (_isLoggedIn) {
       try {
-        await _apiService.updateLikeList(_userId!, currentArtist['id']); // Dodaj do likelist w bazie
+        await _apiService.updateLikeList(_userId!, currentArtist['id']);
       } catch (e) {
         print('Failed to update likelist: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to likelist in database')),
         );
+        return;
       }
     }
+
     setState(() {
-      likedArtists.add(currentArtist); // Dodaj lokalnie
-      _saveLikedArtists(); // Zapisz lokalnie
+      likedArtists.add(currentArtist);
+      _saveLikedArtists();
       _resetPosition();
     });
+
     _fetchNextArtist();
   }
+
+
 
   void _hateCurrentArtist() async {
     var currentArtist = await artistData;
     if (_isLoggedIn) {
       try {
-        await _apiService.updateHateList(_userId!, currentArtist['id']); // Dodaj do hatelist w bazie
+        await _apiService.updateHateList(_userId!, currentArtist['id']);
       } catch (e) {
         print('Failed to update hatelist: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to hatelist in database')),
         );
+        return;
       }
     }
+
     setState(() {
-      hatedArtists.add(currentArtist); // Dodaj lokalnie
-      _saveHatedArtists(); // Zapisz lokalnie
+      hatedArtists.add(currentArtist);
+      _saveHatedArtists();
       _resetPosition();
     });
+
     _fetchNextArtist();
   }
+
+
 
 
   void _resetPosition() {
@@ -281,7 +291,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               var updatedLikedArtists = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => LikedArtistsPage(likedArtists: likedArtists),
+                  builder: (context) => LikedArtistsPage(
+                    likedArtists: likedArtists,
+                    userId: _userId!, // Przekaż userId
+                  ),
                 ),
               );
 
@@ -299,7 +312,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               var updatedHatedArtists = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => HatedArtistsPage(hatedArtists: hatedArtists),
+                  builder: (context) => HatedArtistsPage(
+                    hatedArtists: hatedArtists,
+                    userId: _userId!, // Przekaż userId
+                  ),
                 ),
               );
 
@@ -308,7 +324,6 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   hatedArtists = updatedHatedArtists;
                 });
                 await _saveHatedArtists();
-
               }
             },
           ),
