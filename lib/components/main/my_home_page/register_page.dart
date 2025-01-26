@@ -27,12 +27,18 @@ class RegisterPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                onRegister(
-                  usernameController.text,
-                  passwordController.text,
-                );
-                Navigator.pop(context); // Powrót do głównego widoku
+              onPressed: () async {
+                try {
+                  await onRegister(
+                    usernameController.text,
+                    passwordController.text,
+                  );
+                  Navigator.pop(context); // Powrót do głównego widoku
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               },
               child: const Text('Register'),
             ),

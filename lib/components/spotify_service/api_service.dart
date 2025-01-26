@@ -6,19 +6,21 @@ class ApiService {
 
   ApiService({required this.baseUrl});
 
-  Future<Map<String, dynamic>> registerUser(String username,
-      String password) async {
+  Future<Map<String, dynamic>> registerUser(String username, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
     );
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to register user');
+      // Dodaj obsługę błędów, aby pokazać użytkownikowi szczegóły problemu
+      throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to register user');
     }
   }
+
 
   Future<Map<String, dynamic>> loginUser(String username,
       String password) async {
@@ -73,6 +75,31 @@ class ApiService {
       throw Exception('Failed to update hatelist');
     }
   }
+
+  Future<dynamic> get(String endpoint) async {
+    final url = Uri.parse('$baseUrl$endpoint');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch data: ${response.statusCode}');
+    }
+  }
+
+  Future<void> post(String endpoint, Map<String, dynamic> data) async {
+    final url = Uri.parse('$baseUrl$endpoint');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to post data: ${response.statusCode}');
+    }
+  }
+
 
   Future<void> delete(String endpoint) async {
     final url = Uri.parse('$baseUrl$endpoint');

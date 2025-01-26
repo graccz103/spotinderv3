@@ -3,6 +3,7 @@ import 'dart:math';
 import '../../spotify_service.dart';
 import '../spotify_service/utils.dart';
 import '../spotify_service/api_service.dart';
+import 'friends_page.dart';
 import 'liked_artists_page.dart';
 import 'my_home_page/artist_info_widget.dart';
 import 'my_home_page/liked_artists_manager.dart';
@@ -498,45 +499,53 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           // Add the Login and Register buttons at the bottom
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: !_isLoggedIn
-                ? [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LoginPage(
-                        onLogin: (username, password) {
-                          _loginOrRegister(username, password, true);
-                        },
+            children: [
+              if (!_isLoggedIn) ...[
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(
+                          onLogin: (username, password) {
+                            _loginOrRegister(username, password, true);
+                          },
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: const Text('Login'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RegisterPage(
-                        onRegister: (username, password) {
-                          _loginOrRegister(username, password, false);
-                        },
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Register'),
-              ),
-            ]
-                : [
-              Center(
-                child: Text(
-                  'Welcome back!',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    );
+                  },
+                  child: const Text('Login'),
                 ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RegisterPage(
+                          onRegister: (username, password) {
+                            _loginOrRegister(username, password, false);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Register'),
+                ),
+              ],
+              ElevatedButton(
+                onPressed: () {
+                  if (!_isLoggedIn) {
+                    _showLoginRequiredDialog(); // Pokaż dialog, jeśli użytkownik nie jest zalogowany
+                    return;
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FriendsPage(userId: _userId!),
+                    ),
+                  );
+                },
+                child: const Text('Friends'),
               ),
             ],
           ),
