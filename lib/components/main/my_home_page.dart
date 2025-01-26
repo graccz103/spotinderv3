@@ -12,6 +12,7 @@ import 'hated_artists_page.dart';
 import 'my_home_page/hated_artists_manager.dart';
 import 'my_home_page/login_page.dart';
 import 'my_home_page/register_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 late ApiService _apiService;
 String? _userId; // ID zalogowanego użytkownika
@@ -35,6 +36,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   List<String> genres = []; // Zmienna na listę gatunków
   String? selectedGenre; // Wybrany gatunek
   final PreviewPlayer _previewPlayer = PreviewPlayer();
+  bool _canPerformAction = true;
 
   double _dragPosition = 0;
   double _rotationAngle = 0;
@@ -43,7 +45,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadGenres(); // Załaduj dostępne gatunki
+    _restoreLoginState();
+    _loadGenres();
     _loadLikedArtists();
     _loadHatedArtists();
     _apiService = ApiService(baseUrl: 'http://10.0.2.2:4000');
@@ -75,6 +78,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           ? await _apiService.loginUser(username, password)
           : await _apiService.registerUser(username, password);
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', response['userId']); // Zapisz ID użytkownika
+
       setState(() {
         _userId = response['userId'];
       });
@@ -94,7 +100,17 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _restoreLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUserId = prefs.getString('userId'); // Pobierz zapisane ID użytkownika
 
+    if (savedUserId != null) {
+      setState(() {
+        _userId = savedUserId;
+      });
+      await _synchronizeLists(); // Synchronizuj listy
+    }
+  }
 
 
   Future<void> _synchronizeLists() async {
@@ -184,7 +200,65 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     await HatedArtistsManager.saveHatedArtists(hatedArtists);
   }
 
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Login Required'),
+          content: const Text(
+            'You need to log in or register to access this feature.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Zamknij dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Zamknij dialog
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(
+                      onLogin: (username, password) {
+                        _loginOrRegister(username, password, true);
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Login'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Zamknij dialog
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RegisterPage(
+                      onRegister: (username, password) {
+                        _loginOrRegister(username, password, false);
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Register'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   void _likeCurrentArtist() async {
+    if (!_canPerformAction) return; // Sprawdź, czy akcja jest dozwolona
+    _canPerformAction = false; // Zablokuj możliwość wykonania kolejnej akcji
+
     var currentArtist = await artistData;
     if (_isLoggedIn) {
       try {
@@ -194,6 +268,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to likelist in database')),
         );
+        _canPerformAction = true; // Odblokuj w przypadku błędu
         return;
       }
     }
@@ -205,11 +280,19 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     _fetchNextArtist();
+
+    // Ustawianie cooldown
+    await Future.delayed(const Duration(seconds: 2));
+    _canPerformAction = true; // Odblokuj po cooldownie
   }
 
 
 
+
   void _hateCurrentArtist() async {
+    if (!_canPerformAction) return; // Sprawdź, czy akcja jest dozwolona
+    _canPerformAction = false; // Zablokuj możliwość wykonania kolejnej akcji
+
     var currentArtist = await artistData;
     if (_isLoggedIn) {
       try {
@@ -219,6 +302,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to hatelist in database')),
         );
+        _canPerformAction = true; // Odblokuj w przypadku błędu
         return;
       }
     }
@@ -230,8 +314,27 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     _fetchNextArtist();
+
+    // Ustawiane cooldown
+    await Future.delayed(const Duration(seconds: 2));
+    _canPerformAction = true; // Odblokuj po cooldownie
   }
 
+
+  Future<void> _logoutUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId'); // Usuń zapisane ID użytkownika
+
+    setState(() {
+      _userId = null; // Wylogowanie użytkownika
+      likedArtists = [];
+      hatedArtists = [];
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Logged out successfully')),
+    );
+  }
 
 
 
@@ -248,7 +351,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          if (_userId != null)
+          if (_isLoggedIn)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Center(
@@ -258,6 +361,11 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 ),
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logoutUser(),
+            tooltip: 'Logout',
+          ),
           DropdownButton<String>(
             value: selectedGenre,
             hint: const Text('Select genre'),
@@ -283,17 +391,19 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               await _synchronizeLists();
             },
           ),
-
-
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () async {
+              if (!_isLoggedIn) {
+                _showLoginRequiredDialog();
+                return;
+              }
               var updatedLikedArtists = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => LikedArtistsPage(
                     likedArtists: likedArtists,
-                    userId: _userId!, // Przekaż userId
+                    userId: _userId!,
                   ),
                 ),
               );
@@ -309,12 +419,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () async {
+              if (!_isLoggedIn) {
+                _showLoginRequiredDialog();
+                return;
+              }
               var updatedHatedArtists = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => HatedArtistsPage(
                     hatedArtists: hatedArtists,
-                    userId: _userId!, // Przekaż userId
+                    userId: _userId!,
                   ),
                 ),
               );
@@ -329,6 +443,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           ),
         ],
       ),
+
       body: Column(
         children: [
           Expanded(
