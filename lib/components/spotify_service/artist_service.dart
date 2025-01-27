@@ -81,4 +81,31 @@ class ArtistService {
           (_) => characters[random.nextInt(characters.length)],
     ).join();
   }
+
+  /// Pobieranie opisu artysty z Last.fm
+  Future<String?> getArtistDescription(String artistName) async {
+    const apiKey = '7261f7a1789dfa08cdba57d9abc8ba5d';
+    final url = Uri.parse(
+        'http://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=$artistName&api_key=$apiKey&format=json&lang=en');
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Pobierz opis i usuń link HTML na końcu
+        String? description = data['artist']['bio']['summary'];
+        if (description != null) {
+          description = description.replaceAll(RegExp(r"<a href=.*?</a>"), '').trim();
+        }
+        return description ?? 'No description available.';
+      } else {
+        throw Exception('Failed to fetch artist description');
+      }
+    } catch (e) {
+      print('Error fetching artist description: $e');
+      return null;
+    }
+  }
+
 }

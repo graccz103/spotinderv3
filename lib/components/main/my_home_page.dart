@@ -170,6 +170,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       // Pobierz szczegóły artysty
       var detailedArtist = await widget.spotifyService.getArtistData(newArtist);
 
+      // Pobierz opis z Last.fm
+      var description = await widget.spotifyService.getArtistWithDescription(detailedArtist['name']);
+      detailedArtist['description'] = description['description'];
+
       // Przypisz artystę do danych
       setState(() {
         artistData = Future.value(detailedArtist);
@@ -180,6 +184,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
       _fetchNextArtist();
     }
   }
+
 
 
 

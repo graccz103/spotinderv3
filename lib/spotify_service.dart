@@ -66,6 +66,16 @@ class SpotifyService {
     return await _trackService.getTopTrack(artistId, accessToken);
   }
 
+  // Funkcja pobierająca info o artyście z last.fm
+  Future<Map<String, dynamic>> getArtistWithDescription(String artistName) async {
+    final description = await _artistService.getArtistDescription(artistName);
+    return {
+      'name': artistName,
+      'description': description ?? 'No description available.'
+    };
+  }
+
+
   // Funkcja otwierająca link do Spotify
   Future<void> openSpotifyLink(String url) async {
     await openSpotifyLink(url);

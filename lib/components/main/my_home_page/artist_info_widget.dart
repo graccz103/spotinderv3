@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'artist_description_page.dart'; // Import nowej strony
 
 class ArtistInfoWidget extends StatelessWidget {
   final Map<String, dynamic> artist;
@@ -53,6 +54,19 @@ class ArtistInfoWidget extends StatelessWidget {
                 onPressed: () => onOpenSpotify(spotifyUrl),
                 child: const Text('Open in Spotify'),
               ),
+            const SizedBox(height: 20),
+            // Dodanie przycisku do szczegółowego widoku
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ArtistDescriptionPage(artist: artist),
+                  ),
+                );
+              },
+              child: const Text('View Description'),
+            ),
           ],
         ),
       ),
