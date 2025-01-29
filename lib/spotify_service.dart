@@ -18,7 +18,7 @@ class SpotifyService {
     return _genreManager.validateGenre(genre);
   }
 
-  // Konstruktor z wymaganymi parametrami
+  // Konstruktor z parametrami do api
   SpotifyService({
     required String clientId,
     required String clientSecret,
@@ -36,14 +36,14 @@ class SpotifyService {
 
 
 
-  // Funkcja pobierająca losowego artystę, uwzględniająca listę wykluczonych ID
+  // Pobieranie losowego artysty (uwzględnia juz listę wykluczonych ID = wykluczony gdy jest juz na liscie like/hate)
   Future<Map<String, dynamic>> getRandomArtist({
     required List<String> excludedIds,
     String? genre,
   }) async {
     return await _artistService.getRandomArtist(
       excludedIds: excludedIds,
-      genre: genre, // Przekaż parametr genre
+      genre: genre,
     );
   }
 

@@ -16,17 +16,16 @@ class ArtistService {
     required this.trackService,
   });
 
-  /// Fetch a random artist, optionally filtered by genre
   Future<Map<String, dynamic>> getRandomArtist({
     required List<String> excludedIds,
     String? genre,
   }) async {
     String accessToken = await authService.getAccessToken();
-    int maxRetries = 25; // Maximum number of retries
-    int retries = 0; // Retry counter
+    int maxRetries = 25; // Max ponownych prób znalezienia artysty
+    int retries = 0; // ile bylo prob
 
     while (retries < maxRetries) {
-      int offset = Random().nextInt(100); // Random offset
+      int offset = Random().nextInt(100); // losowanko
       String query = genre != null ? 'genre:$genre' : _getRandomQuery();
 
       var response = await http.get(
@@ -41,7 +40,7 @@ class ArtistService {
         if (searchData['artists']?['items']?.isNotEmpty == true) {
           var artist = searchData['artists']['items'][0];
           if (!excludedIds.contains(artist['id'])) {
-            return artist; // Return artist if found and not excluded
+            return artist;
           }
         }
       }
@@ -52,18 +51,18 @@ class ArtistService {
     throw Exception("No artists found after $maxRetries attempts");
   }
 
-  /// Fetch artist details including latest album and top track concurrently
+ // Wczytywanie zanlezionego artysty
   Future<Map<String, dynamic>> getArtistData(
       Map<String, dynamic> artist, String accessToken) async {
     String artistId = artist['id'];
 
-    // Fetch the latest album and top track in parallel
+    // jego albumu top piosenki
     var results = await Future.wait([
       albumService.getLatestAlbum(artistId, accessToken),
       trackService.getTopTrack(artistId, accessToken),
     ]);
 
-    // Assign results to the artist data
+    // zapisanie tych danych
     artist['latest_album'] =
     results[0].isNotEmpty ? results[0] : {'name': 'No album available'};
     artist['top_track'] =
@@ -72,7 +71,7 @@ class ArtistService {
     return artist;
   }
 
-  /// Generate a random query string
+  // losowe szukanie
   String _getRandomQuery() {
     const characters = 'abcdefghijklmnopqrstuvwxyz';
     Random random = Random();
@@ -82,7 +81,7 @@ class ArtistService {
     ).join();
   }
 
-  /// Pobieranie opisu artysty z Last.fm
+  // Pobieranie opisu artysty z Last.fm
   Future<String?> getArtistDescription(String artistName) async {
     const apiKey = '7261f7a1789dfa08cdba57d9abc8ba5d';
     final url = Uri.parse(
@@ -93,7 +92,7 @@ class ArtistService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Pobierz opis i usuń link HTML na końcu
+        // Pobieranie opis i usuwanie linku HTML na końcu
         String? description = data['artist']['bio']['summary'];
         if (description != null) {
           description = description.replaceAll(RegExp(r"<a href=.*?</a>"), '').trim();

@@ -16,7 +16,7 @@ import 'my_home_page/register_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 late ApiService _apiService;
-String? _userId; // ID zalogowanego użytkownika
+String? _userId;
 bool get _isLoggedIn => _userId != null;
 
 class MyHomePage extends StatefulWidget {
@@ -34,8 +34,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Future<Map<String, dynamic>> artistData = Future.value({});
   List<Map<String, dynamic>> likedArtists = [];
   List<Map<String, dynamic>> hatedArtists = [];
-  List<String> genres = []; // Zmienna na listę gatunków
-  String? selectedGenre; // Wybrany gatunek
+  List<String> genres = [];
+  String? selectedGenre;
   final PreviewPlayer _previewPlayer = PreviewPlayer();
   bool _canPerformAction = true;
 
@@ -80,7 +80,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           : await _apiService.registerUser(username, password);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userId', response['userId']); // Zapisz ID użytkownika
+      await prefs.setString('userId', response['userId']);
 
       setState(() {
         _userId = response['userId'];
@@ -103,13 +103,13 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future<void> _restoreLoginState() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedUserId = prefs.getString('userId'); // Pobierz zapisane ID użytkownika
+    final savedUserId = prefs.getString('userId'); // Pobierz zapisane ID użytkownika i zaloguje auto
 
     if (savedUserId != null) {
       setState(() {
         _userId = savedUserId;
       });
-      await _synchronizeLists(); // Synchronizuj listy
+      await _synchronizeLists(); // Synchronizuje listy
     }
   }
 
@@ -218,13 +218,13 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Zamknij dialog
+                Navigator.pop(context);
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Zamknij dialog
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -240,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Zamknij dialog
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -262,8 +262,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
 
   void _likeCurrentArtist() async {
-    if (!_canPerformAction) return; // Sprawdź, czy akcja jest dozwolona
-    _canPerformAction = false; // Zablokuj możliwość wykonania kolejnej akcji
+    if (!_canPerformAction) return; // sprawdz czy cooldown jest czy minal
+    _canPerformAction = false; // do colldownu
 
     var currentArtist = await artistData;
     if (_isLoggedIn) {
@@ -274,7 +274,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to likelist in database')),
         );
-        _canPerformAction = true; // Odblokuj w przypadku błędu
+        _canPerformAction = true; // odblokuje sie w przypadku błędu
         return;
       }
     }
@@ -296,8 +296,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
 
   void _hateCurrentArtist() async {
-    if (!_canPerformAction) return; // Sprawdź, czy akcja jest dozwolona
-    _canPerformAction = false; // Zablokuj możliwość wykonania kolejnej akcji
+    if (!_canPerformAction) return; // sprawdz czy cooldown jest czy minal
+    _canPerformAction = false; // do colldownu
 
     var currentArtist = await artistData;
     if (_isLoggedIn) {
@@ -308,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add artist to hatelist in database')),
         );
-        _canPerformAction = true; // Odblokuj w przypadku błędu
+        _canPerformAction = true; // odblokuje sie w przypadku błędu
         return;
       }
     }
@@ -329,10 +329,10 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   Future<void> _logoutUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('userId'); // Usuń zapisane ID użytkownika
+    await prefs.remove('userId'); // Usunie zapisane ID użytkownika
 
     setState(() {
-      _userId = null; // Wylogowanie użytkownika
+      _userId = null; // Wylogowanie użytkownika =  ustawnie id na null
       likedArtists = [];
       hatedArtists = [];
     });
@@ -383,7 +383,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               if (value == null || widget.spotifyService.validateGenre(value)) {
                 setState(() {
                   selectedGenre = value;
-                  _fetchNextArtist(); // Przeładuj artystów na podstawie gatunku
+                  _fetchNextArtist(); // Przeładuje artystów na podstawie gatunku
                 });
               } else {
                 print('Invalid genre selected');
